@@ -11,16 +11,22 @@
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    flake-utils.url = "github:numtide/flake-utils";
+    flake-utils-plus.url = "github:gytis-ivaskevicius/flake-utils-plus/?ref=refs/pull/120/head";
+    flake-utils-plus.inputs.flake-utils.follows = "flake-utils";
   };
 
   outputs = {
     self,
     nixpkgs,
+    flake-utils-plus,
     darwin,
     home-manager,
   }: let
     agenix = system: nixpkgs.legacyPackages.${system}.callPackage ./pkgs/agenix.nix {};
     doc = system: nixpkgs.legacyPackages.${system}.callPackage ./pkgs/doc.nix {};
+    # Super Stupid Flakes (ssf) / System As an Input - Style:
+    supportedSystems = flake-utils-plus.lib.defaultSystems;
   in {
     nixosModules.age = import ./modules/age.nix;
     nixosModules.default = self.nixosModules.age;
@@ -92,7 +98,7 @@
     darwinConfigurations.integration-aarch64.system = self.checks.aarch64-darwin.integration;
 
     # Work-around for https://github.com/nix-community/home-manager/issues/3075
-    legacyPackages = nixpkgs.lib.genAttrs ["aarch64-darwin" "x86_64-darwin"] (system: {
+    legacyPackages = nixpkgs.lib.genAttrs supportedSystems (system: {
       homeConfigurations.integration-darwin = home-manager.lib.homeManagerConfiguration {
         pkgs = nixpkgs.legacyPackages.${system};
         modules = [./test/integration_hm_darwin.nix];
